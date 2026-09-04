@@ -21,7 +21,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 dialog{width:min(92%,480px);background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:22px;padding:20px}dialog::backdrop{background:rgba(0,0,0,.72)}
 input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--text);margin:7px 0 12px;font-size:16px}
 .actions{display:flex;gap:10px}.actions button{flex:1;padding:13px;border-radius:12px;border:0;font-weight:700}.cancel{background:var(--card2);color:var(--text)}.save{background:var(--accent);color:#0b0d10}
-.empty{color:var(--muted);font-size:14px;text-align:center;padding:12px}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:12px}.legal-link{background:none;border:0;color:var(--muted);font:inherit;text-decoration:underline;padding:0;cursor:pointer}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 14px}
 .tab{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:12px;padding:11px 6px;font-weight:700}
 .tab.active{background:var(--accent);color:#0b0d10;border-color:var(--accent)}
@@ -43,7 +43,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 
 
-</style>
+.legal-content{font-size:14px;line-height:1.55;color:var(--text);max-height:65vh;overflow:auto;padding-right:3px}.legal-content h3{font-size:20px;margin:0 0 14px}.legal-content h4{font-size:15px;margin:18px 0 6px}.legal-content p{margin:6px 0 12px}</style>
 </head>
 <body>
 <main class="app">
@@ -752,7 +752,54 @@ function saveWeight(){
 render();
 showPage('today');
 if(!profile) setTimeout(()=>openProfile(),350);
+
+function openLegal(type){
+  const dlg=document.getElementById('legalDlg');
+  const privacy=document.getElementById('privacyContent');
+  const imprint=document.getElementById('imprintContent');
+  const title=document.getElementById('legalTitle');
+  if(type==='imprint'){title.textContent='Impressum';privacy.style.display='none';imprint.style.display='block';}
+  else{title.textContent='Datenschutz';privacy.style.display='block';imprint.style.display='none';}
+  dlg.showModal();
+}
 </script>
-<footer style="text-align:center;color:var(--muted);font-size:12px;padding:24px 18px 10px;">© 2026 Alexander Folz. Alle Rechte vorbehalten.</footer>
+<footer style="text-align:center;color:var(--muted);font-size:12px;padding:24px 18px 10px;">
+<div style="margin-bottom:8px"><button type="button" class="legal-link" onclick="openLegal('privacy')">Datenschutz</button><span style="opacity:.5"> · </span><button type="button" class="legal-link" onclick="openLegal('imprint')">Impressum</button></div>
+© 2026 Alexander Folz. Alle Rechte vorbehalten.
+</footer>
+
+<dialog id="legalDlg">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px">
+    <h2 id="legalTitle" style="margin:0">Datenschutz</h2>
+    <button class="cancel" onclick="document.getElementById('legalDlg').close()" style="border:0;border-radius:12px;padding:9px 13px;font-weight:700">Schließen</button>
+  </div>
+  <div id="privacyContent" class="legal-content">
+    <h3>Datenschutzerklärung</h3>
+    <p>Diese Datenschutzerklärung informiert über die Verarbeitung personenbezogener Daten bei der Nutzung von FOLZsche KALORIX.</p>
+    <h4>1. Verantwortlicher</h4>
+    <p><strong>Alexander Folz</strong><br>[Anschrift ergänzen]<br>E-Mail: [E-Mail-Adresse ergänzen]</p>
+    <h4>2. Welche Daten verarbeitet KALORIX?</h4>
+    <p>Die App kann insbesondere Profildaten wie Name, Alter, Geschlecht, Größe, Gewicht, Zielgewicht und Aktivitätslevel sowie von dir erfasste Lebensmittel-, Kalorien- und Gewichtsdaten verarbeiten.</p>
+    <h4>3. Speicherung der App-Daten</h4>
+    <p>In der aktuellen Version werden Profil-, Lebensmittel- und Verlaufsdaten ausschließlich lokal im Browser des jeweiligen Geräts gespeichert (Local Storage). Eine zentrale Kalorix-Datenbank wird derzeit nicht verwendet. Bei Löschung der Browserdaten oder einem Gerätewechsel können diese lokalen Daten verloren gehen.</p>
+    <h4>4. Lebensmittelsuche</h4>
+    <p>Wenn du die Online-Lebensmittelsuche verwendest, wird dein eingegebener Suchbegriff an Open Food Facts übermittelt, damit passende Lebensmittel gefunden werden können. Für die externe Verarbeitung gelten zusätzlich die Datenschutzinformationen von Open Food Facts.</p>
+    <h4>5. Hosting</h4>
+    <p>FOLZsche KALORIX wird über Vercel bereitgestellt. Beim Aufruf können technisch erforderliche Verbindungsdaten im Rahmen des Hostings verarbeitet werden. Zusätzlich gelten die Datenschutzinformationen von Vercel.</p>
+    <h4>6. Rechte der betroffenen Personen</h4>
+    <p>Je nach anwendbarem Datenschutzrecht bestehen insbesondere Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch sowie gegebenenfalls ein Beschwerderecht bei einer Datenschutzaufsichtsbehörde.</p>
+    <p><strong>Hinweis:</strong> Diese Erklärung ist für die aktuelle technische Version vorbereitet. Vor einem kommerziellen Launch sollte sie an das endgültige Datenverarbeitungskonzept angepasst und rechtlich geprüft werden.</p>
+  </div>
+  <div id="imprintContent" class="legal-content" style="display:none">
+    <h3>Impressum</h3>
+    <h4>Angaben gemäß § 5 DDG</h4>
+    <p><strong>Alexander Folz</strong><br>[Straße und Hausnummer ergänzen]<br>[PLZ Ort ergänzen]<br>[Land ergänzen]</p>
+    <p><strong>E-Mail:</strong> [E-Mail-Adresse ergänzen]</p>
+    <h4>Verantwortlich für den Inhalt</h4>
+    <p>Alexander Folz<br>[vollständige ladungsfähige Anschrift ergänzen]</p>
+    <h4>Hinweis</h4>
+    <p>FOLZsche KALORIX unterstützt bei der Erfassung und Auswertung von Kalorien- und Gewichtsdaten. Die Anwendung ersetzt keine medizinische Beratung, Diagnose oder Behandlung.</p>
+  </div>
+</dialog>
 </body>
 </html>
