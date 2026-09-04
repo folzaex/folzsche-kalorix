@@ -58,7 +58,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
   <div class="label" id="todayDate" style="margin-top:4px;padding-right:145px"></div>
   <div class="cal"><span id="total">0</span> <small>/ <span id="goal">1850</span> kcal</small></div>
   <div class="bar"><div class="fill" id="fill"></div></div>
-  <div class="remaining"><b id="left">1.850</b> kcal übrig</div>
+  <div class="remaining" id="remainingCalories"><b id="left">1.850</b> kcal übrig</div>
   <div class="remaining" id="lastWeight" style="margin-top:9px;font-size:16px"></div>
 </section>
 
@@ -474,7 +474,14 @@ function render(){
  }
  let t=0,p=0,c=0,f=0;foods.forEach(x=>{t+=x.kcal;p+=x.p;c+=x.c;f+=x.f});
  total.textContent=t.toLocaleString('de-DE'); document.getElementById('goal').textContent=goal.toLocaleString('de-DE');
- const left=Math.max(goal-t,0);document.getElementById('left').textContent=left.toLocaleString('de-DE');
+ const remainingEl=document.getElementById('remainingCalories');
+ if(t>goal){
+   const excess=t-goal;
+   remainingEl.innerHTML='<b id="left" style="color:var(--danger)">'+excess.toLocaleString('de-DE')+'</b> kcal zu viel';
+ }else{
+   const left=goal-t;
+   remainingEl.innerHTML='<b id="left">'+left.toLocaleString('de-DE')+'</b> kcal übrig';
+ }
  document.getElementById('fill').style.width=Math.min(t/goal*100,100)+'%';
  protein.textContent=Math.round(p)+' g';carbs.textContent=Math.round(c)+' g';fat.textContent=Math.round(f)+' g';
  updateLastWeight();
@@ -746,5 +753,6 @@ render();
 showPage('today');
 if(!profile) setTimeout(()=>openProfile(),350);
 </script>
+<footer style="text-align:center;color:var(--muted);font-size:12px;padding:24px 18px 10px;">© 2026 Alexander Folz. Alle Rechte vorbehalten.</footer>
 </body>
 </html>
