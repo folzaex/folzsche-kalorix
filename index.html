@@ -459,7 +459,7 @@ function updateLastWeight(){
  }
  const [key,rec]=entries[entries.length-1];
  const [y,m,d]=key.split('-');
- el.innerHTML=`Dein letzter Gewichtseintrag war <b>${Number(rec.weight).toFixed(1)} kg</b> am <b>${d}.${m}.${y}</b>.`;
+ el.innerHTML=`Letztes Wiegen am <b>${d}.${m}.${y}</b>: <b>${Number(rec.weight).toFixed(1)} kg</b>`;
 }
 
 function render(){
