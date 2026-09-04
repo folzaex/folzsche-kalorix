@@ -573,7 +573,7 @@ function periodData(){
       const recorded=values.filter(v=>v>0);
       const weightEntries=keys.map(k=>historyData[k]?.weight).filter(v=>typeof v==='number'&&v>0);
       weeks.push({
-        label:`KW ${getISOWeek(startW)}`,
+        label:`Ø KW ${getISOWeek(startW)}`,
         value:recorded.length ? Math.round(recorded.reduce((a,b)=>a+b,0)/recorded.length) : 0,
         weight:weightEntries.length ? weightEntries.reduce((a,b)=>a+b,0)/weightEntries.length : null
       });
@@ -596,7 +596,7 @@ function periodData(){
   }
   return {
     title:'Letzte 7 Monate',
-    labels:months.map(k=>new Intl.DateTimeFormat('de-DE',{month:'short'}).format(dateObj(k+'-01'))),
+    labels:months.map(k=>'Ø '+new Intl.DateTimeFormat('de-DE',{month:'short'}).format(dateObj(k+'-01'))),
     values:months.map(k=>{
       const days=Object.keys(historyData).filter(day=>day.startsWith(k+'-'));
       const recorded=days.map(dayTotals).map(x=>x.kcal).filter(v=>v>0);
@@ -622,8 +622,8 @@ function getISOWeek(date){
 function renderHistory(){
   const d=periodData();
   document.getElementById('historyTitle').textContent=d.title;
-  document.getElementById('calorieHeading').textContent=historyPeriod==='day' ? 'Kalorien' : 'Kalorien Ø';
-  document.getElementById('weightHeading').textContent=historyPeriod==='day' ? 'Gewicht' : 'Gewicht Ø';
+  document.getElementById('calorieHeading').textContent='Kalorien';
+  document.getElementById('weightHeading').textContent='Gewicht';
   const weightEntryBtn=document.getElementById('weightEntryBtn');
   if(weightEntryBtn) weightEntryBtn.style.display=historyPeriod==='day' ? 'block' : 'none';
   const currentWeightEl=document.getElementById('currentWeight');
@@ -644,7 +644,7 @@ function renderHistory(){
   document.getElementById('historyStats').innerHTML=`
     <div class="macro"><strong>${Math.round(total).toLocaleString('de-DE')}</strong><span>kcal gesamt</span></div>
     <div class="macro"><strong>${count}</strong><span>Tage erfasst</span></div>
-    <div class="macro"><strong>${count?Math.round(total/count).toLocaleString('de-DE'):'–'}</strong><span>kcal / Tag</span></div>`;
+    <div class="macro"><strong>${count?Math.round(total/count).toLocaleString('de-DE'):'–'}</strong><span>${historyPeriod==='day' ? 'kcal / Tag' : 'Ø kcal / Tag'}</span></div>`;
 
   /* Kalorien-Balkendiagramm bleibt in allen Zeiträumen historisch. */
   if(historyPeriod==='day'){
