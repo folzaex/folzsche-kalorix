@@ -55,7 +55,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.8</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.9</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -84,7 +84,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.8</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.9</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -735,7 +735,17 @@ function periodData(){
       values:weeks.map(w=>w.value),
       weights:weeks.map(w=>w.weight),
       recordedDays:weeks.reduce((sum,w)=>sum+w.recordedDays,0),
-      totalKcal:weeks.reduce((sum,w)=>sum+(w.recordedTotal||0),0)
+      // Gesamtkalorien des Monats direkt aus allen abgeschlossenen Tagen berechnen.
+      // Nicht über die Kalenderwochen summieren, sondern exakt wie beim Jahr.
+      totalKcal:(()=>{
+        const todayKeyLocal=today.toISOString().slice(0,10);
+        return Object.keys(historyData)
+          .filter(day=>day!==todayKeyLocal)
+          .filter(day=>{ const dt=dateObj(day); return dt && dt.getFullYear()===today.getFullYear() && dt.getMonth()===today.getMonth(); })
+          .map(day=>dayTotals(day).kcal)
+          .filter(v=>v>0)
+          .reduce((a,b)=>a+b,0);
+      })()
     };
   }
 
