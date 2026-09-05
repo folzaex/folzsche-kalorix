@@ -683,6 +683,7 @@ function periodData(){
       title:new Intl.DateTimeFormat('de-DE',{day:'numeric',month:'long',year:'numeric'}).format(new Date()),
       labels:['Heute'],
       values:[t.kcal],
+      totalKcal:t.kcal,
       weights:[historyData[k]?.weight||null],
       recordedDays:t.kcal>0?1:0
     };
@@ -694,6 +695,7 @@ function periodData(){
       title:'Letzte 7 Tage',
       labels:ks.map(k=>new Intl.DateTimeFormat('de-DE',{weekday:'short'}).format(dateObj(k))),
       values:ks.map(dayTotals).map(x=>x.kcal),
+      totalKcal:ks.map(dayTotals).reduce((sum,x)=>sum+x.kcal,0),
       weights:ks.map(k=>historyData[k]?.weight||null),
       recordedDays:ks.filter(k=>dayTotals(k).kcal>0).length
     };
@@ -722,7 +724,8 @@ function periodData(){
         label:`Ø KW ${getISOWeek(startW)}`,
         value:recorded.length ? Math.round(recorded.reduce((a,b)=>a+b,0)/recorded.length) : 0,
         weight:weightEntries.length ? weightEntries.reduce((a,b)=>a+b,0)/weightEntries.length : null,
-        recordedDays:recorded.length
+        recordedDays:recorded.length,
+        recordedTotal:recorded.reduce((a,b)=>a+b,0)
       });
     }
     return {
@@ -730,7 +733,8 @@ function periodData(){
       labels:weeks.map(w=>w.label),
       values:weeks.map(w=>w.value),
       weights:weeks.map(w=>w.weight),
-      recordedDays:weeks.reduce((sum,w)=>sum+w.recordedDays,0)
+      recordedDays:weeks.reduce((sum,w)=>sum+w.recordedDays,0),
+      totalKcal:weeks.reduce((sum,w)=>sum+(w.recordedTotal||0),0)
     };
   }
 
@@ -757,7 +761,8 @@ function periodData(){
         .map(([,v])=>v.weight);
       return entries.length ? entries.reduce((a,b)=>a+b,0)/entries.length : null;
     }),
-    recordedDays:months.reduce((sum,k)=>sum+Object.keys(historyData).filter(day=>day.startsWith(k+'-')&&day!==new Date().toISOString().slice(0,10)).filter(day=>dayTotals(day).kcal>0).length,0)
+    recordedDays:months.reduce((sum,k)=>sum+Object.keys(historyData).filter(day=>day.startsWith(k+'-')&&day!==new Date().toISOString().slice(0,10)).filter(day=>dayTotals(day).kcal>0).length,0),
+    totalKcal:months.reduce((sum,k)=>sum+Object.keys(historyData).filter(day=>day.startsWith(k+'-')&&day!==new Date().toISOString().slice(0,10)).map(day=>dayTotals(day).kcal).filter(v=>v>0).reduce((a,b)=>a+b,0),0)
   };
 }
 
@@ -781,7 +786,7 @@ function renderHistory(){
   if(currentWeightEl) currentWeightEl.style.display=historyPeriod==='day' ? 'block' : 'none';
   if(weightTrendEl) weightTrendEl.style.display=historyPeriod==='day' ? 'block' : 'none';
 
-  const total=d.values.reduce((a,b)=>a+b,0);
+  const total=typeof d.totalKcal==='number' ? d.totalKcal : d.values.reduce((a,b)=>a+b,0);
   const count=typeof d.recordedDays==='number' ? d.recordedDays : d.values.filter(v=>v>0).length;
   let weights=d.weights.filter(x=>typeof x==='number');
   let avgW=weights.length?weights.reduce((a,b)=>a+b,0)/weights.length:null;
