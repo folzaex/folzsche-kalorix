@@ -56,7 +56,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.13</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.14</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -85,7 +85,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.13</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.14</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -857,7 +857,7 @@ function renderHistory(){
   let latestW=null;
   Object.entries(historyData).sort().forEach(([k,v])=>{if(v.weight) latestW=v.weight});
   document.getElementById('currentWeight').textContent=latestW?Number(latestW).toFixed(1)+' kg':'– kg';
-  document.getElementById('weightTrend').textContent=weights.length?(avgW.toFixed(1)+' kg durchschnittlich in dieser Ansicht'):'Noch kein Gewicht eingetragen';
+  document.getElementById('weightTrend').textContent=weights.length?(avgW.toFixed(1)+' kg durchschnittlich in dieser Ansicht'):(latestW?Number(latestW).toFixed(1)+' kg aktuell':'Noch kein Gewicht eingetragen');
 
   document.getElementById('historyStats').innerHTML=`
     <div class="macro"><strong>${Math.round(total).toLocaleString('de-DE')}</strong><span>kcal gesamt</span></div>
@@ -889,8 +889,8 @@ function renderHistory(){
 
   /* Tag: nur aktueller Fortschritt. Woche/Monat/Jahr: nur Historie als Balkendiagramm. */
   if(historyPeriod==='day'){
-    if(weights.length && startWeight && targetWeight){
-      const current=Number(weights[weights.length-1]);
+    if((weights.length || latestW) && startWeight && targetWeight){
+      const current=Number(weights.length ? weights[weights.length-1] : latestW);
       const span=Math.abs(startWeight-targetWeight)||1;
       const progress=startWeight>targetWeight
         ? Math.max(0,Math.min(100,((current-targetWeight)/span)*100))
