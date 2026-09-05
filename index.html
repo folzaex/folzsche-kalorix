@@ -53,10 +53,17 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 .saved-meal-row{display:flex;align-items:center;gap:7px;margin-top:7px}.saved-meal-add{flex:1;text-align:left;background:transparent;color:var(--text);border:0;padding:6px 0;cursor:pointer}.saved-meal-add strong{font-size:14px}.saved-meal-meta{font-size:12px;color:var(--muted);margin-top:2px}.saved-meal-delete{width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--danger);font-size:18px}
 </style>
 </style>
+<style id="barcode-style">
+.barcode-preview{position:relative;background:#050608;border:1px solid var(--line);border-radius:18px;overflow:hidden;aspect-ratio:4/3;display:grid;place-items:center}
+.barcode-preview video{width:100%;height:100%;object-fit:cover;display:block}
+.barcode-frame{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.barcode-frame span{display:block;width:72%;height:34%;border:3px solid var(--accent);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.24)}
+.barcode-manual{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+</style>
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.16</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.17</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -85,7 +92,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.16</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.17</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -216,6 +223,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
   <div style="display:flex;gap:8px">
     <input id="searchFood" placeholder="z. B. Banane, Haferflocken..." style="margin-bottom:0">
     <button class="save" aria-label="Lebensmittel suchen" onclick="searchFoods()" style="width:52px;height:52px;border-radius:12px;border:0;display:grid;place-items:center;font-size:27px;line-height:1;font-family:Arial,sans-serif">⌕</button>
+    <button class="cancel" aria-label="Barcode scannen" onclick="openBarcodeScanner()" style="width:52px;height:52px;border-radius:12px;border:1px solid var(--line);display:grid;place-items:center;font-size:23px;line-height:1;font-family:Arial,sans-serif">▥</button>
   </div>
   <p class="label" id="searchStatus" style="margin:10px 0 6px"></p>
   <div id="savedMealsBox"></div>
@@ -242,6 +250,26 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
   </div>
 </dialog>
 
+<dialog id="barcodeDlg">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+    <h2 style="margin:0">Barcode scannen</h2>
+    <button class="cancel" onclick="closeBarcodeScanner()" style="border:0;border-radius:12px;padding:9px 13px;font-weight:700">Abbrechen</button>
+  </div>
+  <div class="barcode-preview">
+    <video id="barcodeVideo" playsinline muted></video>
+    <div class="barcode-frame"><span></span></div>
+  </div>
+  <p id="barcodeStatus" class="label" style="margin:10px 0 0;text-align:center">Kamera wird gestartet …</p>
+  <div class="barcode-manual">
+    <label class="label">Barcode auch manuell eingeben</label>
+    <div style="display:flex;gap:8px">
+      <input id="barcodeInput" inputmode="numeric" autocomplete="off" placeholder="z. B. 4006381333931" style="margin-bottom:0">
+      <button class="save" onclick="lookupBarcode(document.getElementById('barcodeInput').value)" style="border:0;border-radius:12px;padding:0 15px;font-weight:700">Suchen</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
 <script>
 const todayKey=()=>new Date().toISOString().slice(0,10);
 let historyData=JSON.parse(localStorage.getItem('kalorixHistory')||'{}');
@@ -600,6 +628,107 @@ async function searchFoods(){
     searchStatus.textContent='Dieses Lebensmittel ist noch nicht offline hinterlegt. Bitte später erneut versuchen oder einen anderen Suchbegriff verwenden.';
   }
 }
+let barcodeReader=null;
+let barcodeControls=null;
+let barcodeBusy=false;
+const barcodeDlg=document.getElementById('barcodeDlg');
+
+async function openBarcodeScanner(){
+  barcodeBusy=false;
+  document.getElementById('barcodeInput').value='';
+  document.getElementById('barcodeStatus').textContent='Kamera wird gestartet …';
+  barcodeDlg.showModal();
+  try{
+    if(!window.isSecureContext){
+      document.getElementById('barcodeStatus').textContent='Der Scanner benötigt eine sichere Verbindung (HTTPS).';
+      return;
+    }
+    if(!window.ZXingBrowser?.BrowserMultiFormatReader){
+      document.getElementById('barcodeStatus').textContent='Scanner konnte nicht geladen werden. Bitte Barcode manuell eingeben.';
+      return;
+    }
+    barcodeReader=new ZXingBrowser.BrowserMultiFormatReader();
+    const video=document.getElementById('barcodeVideo');
+    const controls=await barcodeReader.decodeFromConstraints(
+      {video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},
+      video,
+      async (result,error)=>{
+        if(result && !barcodeBusy){
+          barcodeBusy=true;
+          const code=result.getText();
+          document.getElementById('barcodeStatus').textContent='Barcode erkannt: '+code;
+          await lookupBarcode(code);
+        }
+      }
+    );
+    barcodeControls=controls;
+    document.getElementById('barcodeStatus').textContent='Barcode vor den Rahmen halten …';
+  }catch(e){
+    console.error(e);
+    document.getElementById('barcodeStatus').textContent='Kamera konnte nicht gestartet werden. Bitte Kamerazugriff erlauben oder Barcode manuell eingeben.';
+  }
+}
+
+function closeBarcodeScanner(){
+  try{ if(barcodeControls) barcodeControls.stop(); }catch(e){}
+  barcodeControls=null;
+  try{ if(barcodeReader) barcodeReader.reset(); }catch(e){}
+  barcodeReader=null;
+  const video=document.getElementById('barcodeVideo');
+  if(video?.srcObject){ video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; }
+  barcodeBusy=false;
+  if(barcodeDlg.open) barcodeDlg.close();
+}
+
+async function lookupBarcode(rawCode){
+  const code=String(rawCode||'').trim();
+  if(!code){
+    document.getElementById('barcodeStatus').textContent='Bitte einen Barcode eingeben.';
+    barcodeBusy=false;
+    return;
+  }
+  if(!/^\d{8,18}$/.test(code)){
+    document.getElementById('barcodeStatus').textContent='Bitte einen gültigen Zahlen-Barcode eingeben.';
+    barcodeBusy=false;
+    return;
+  }
+  document.getElementById('barcodeStatus').textContent='Produkt wird gesucht …';
+  try{
+    const url='https://world.openfoodfacts.org/api/v3/product/'+encodeURIComponent(code)+'.json?product_type=food&fields=code,product_name,brands,nutriments';
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(data.status!==1 || !data.product){
+      document.getElementById('barcodeStatus').textContent='Produkt nicht gefunden. Du kannst den Barcode erneut scannen oder manuell suchen.';
+      barcodeBusy=false;
+      return;
+    }
+    const p=data.product, n=p.nutriments||{};
+    const food={
+      name:p.product_name||'Unbekanntes Produkt',
+      brand:p.brands||'',
+      code:String(data.code||code),
+      kcal:Number(n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0),
+      p:Number(n.proteins_100g ?? 0),
+      c:Number(n.carbohydrates_100g ?? 0),
+      f:Number(n.fat_100g ?? 0)
+    };
+    if(!(food.kcal||food.p||food.c||food.f)){
+      document.getElementById('barcodeStatus').textContent='Produkt gefunden, aber keine verwertbaren Nährwerte vorhanden.';
+      barcodeBusy=false;
+      return;
+    }
+    closeBarcodeScanner();
+    selectFood(food);
+    searchFood.value='';
+    searchStatus.textContent='Produkt per Barcode gefunden';
+  }catch(e){
+    console.error(e);
+    document.getElementById('barcodeStatus').textContent='Online-Suche fehlgeschlagen. Bitte Internetverbindung prüfen oder Barcode manuell suchen.';
+    barcodeBusy=false;
+  }
+}
+
 function showSearchResults(products,status,compact=false){
   searchStatus.textContent=status; results.innerHTML=products.map(x=>`
     <div style="display:flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:8px 10px;margin:7px 0">
