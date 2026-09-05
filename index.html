@@ -56,7 +56,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.14</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.15</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -85,7 +85,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.14</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.15</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -120,8 +120,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
       <button id="weightEntryBtn" onclick="openWeight()" style="border:0;border-radius:12px;padding:9px 13px;background:var(--accent);color:#0b0d10;font-weight:800">Gewicht eintragen</button>
     </div>
     <div id="currentWeight" class="cal" style="font-size:28px">– kg</div>
-    <div id="weightTrend" class="label">Noch kein Gewicht eingetragen</div>
-    <div id="weightChart" style="margin-top:18px"></div>
+        <div id="weightChart" style="margin-top:18px"></div>
   </section>
 </div>
 
@@ -857,7 +856,6 @@ function renderHistory(){
   let latestW=null;
   Object.entries(historyData).sort().forEach(([k,v])=>{if(v.weight) latestW=v.weight});
   document.getElementById('currentWeight').textContent=latestW?Number(latestW).toFixed(1)+' kg':'– kg';
-  document.getElementById('weightTrend').textContent=weights.length?(avgW.toFixed(1)+' kg durchschnittlich in dieser Ansicht'):(latestW?Number(latestW).toFixed(1)+' kg aktuell':'Noch kein Gewicht eingetragen');
 
   document.getElementById('historyStats').innerHTML=`
     <div class="macro"><strong>${Math.round(total).toLocaleString('de-DE')}</strong><span>kcal gesamt</span></div>
