@@ -55,7 +55,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.9</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.10</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -84,7 +84,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.9</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.10</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -702,31 +702,36 @@ function periodData(){
   }
 
   if(historyPeriod==='month'){
-    /* 7 Kalenderwochen: jeweils der Durchschnitt der erfassten Tage */
+    /* 7 Kalenderwochen. Alle Kennzahlen werden aus exakt denselben Tageswerten gebildet. */
     const today=new Date(); today.setHours(0,0,0,0);
+    const todayKeyLocal=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     const monday=new Date(today);
     const day=monday.getDay() || 7;
     monday.setDate(monday.getDate()-day+1);
 
     const weeks=[];
+    const allRecordedTotals=[];
     for(let i=6;i>=0;i--){
       const startW=new Date(monday); startW.setDate(monday.getDate()-i*7);
-      const endW=new Date(startW); endW.setDate(startW.getDate()+6);
       const keys=[];
-      for(let d=new Date(startW); d<=endW; d.setDate(d.getDate()+1)){
-        keys.push(d.toISOString().slice(0,10));
+      for(let offset=0;offset<7;offset++){
+        const d=new Date(startW); d.setDate(startW.getDate()+offset);
+        const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        keys.push(key);
       }
-      const values=keys.map(dayTotals).map(x=>x.kcal);
-      // Für die Monatsstatistik zählen nur abgeschlossene Tage – heute bleibt außen vor.
-      const todayKeyLocal=today.toISOString().slice(0,10);
-      const recorded=keys.map((k,i)=>({k,v:values[i]})).filter(x=>x.k!==todayKeyLocal&&x.v>0).map(x=>x.v);
+      const recorded=keys
+        .filter(k=>k!==todayKeyLocal)
+        .map(k=>dayTotals(k).kcal)
+        .filter(v=>v>0);
       const weightEntries=keys.map(k=>historyData[k]?.weight).filter(v=>typeof v==='number'&&v>0);
+      const weekTotal=recorded.reduce((a,b)=>a+b,0);
+      allRecordedTotals.push(...recorded);
       weeks.push({
         label:`Ø KW ${getISOWeek(startW)}`,
-        value:recorded.length ? Math.round(recorded.reduce((a,b)=>a+b,0)/recorded.length) : 0,
+        value:recorded.length ? Math.round(weekTotal/recorded.length) : 0,
         weight:weightEntries.length ? weightEntries.reduce((a,b)=>a+b,0)/weightEntries.length : null,
         recordedDays:recorded.length,
-        recordedTotal:recorded.reduce((a,b)=>a+b,0)
+        recordedTotal:weekTotal
       });
     }
     return {
@@ -734,10 +739,8 @@ function periodData(){
       labels:weeks.map(w=>w.label),
       values:weeks.map(w=>w.value),
       weights:weeks.map(w=>w.weight),
-      recordedDays:weeks.reduce((sum,w)=>sum+w.recordedDays,0),
-      // Gesamtkalorien exakt aus denselben abgeschlossenen Tagen wie die 7 Kalenderwochen berechnen.
-      // Heute bleibt außen vor; die Monatsansicht umfasst den kompletten dargestellten 7-Kalenderwochen-Zeitraum.
-      totalKcal:weeks.reduce((sum,w)=>sum+(w.recordedTotal||0),0)
+      recordedDays:allRecordedTotals.length,
+      totalKcal:allRecordedTotals.reduce((a,b)=>a+b,0)
     };
   }
 
