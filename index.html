@@ -56,14 +56,15 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 <style id="barcode-style">
 .barcode-preview{position:relative;background:#050608;border:1px solid var(--line);border-radius:18px;overflow:hidden;aspect-ratio:4/3;display:grid;place-items:center}
 .barcode-preview video{width:100%;height:100%;object-fit:cover;display:block}
-.barcode-frame{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
-.barcode-frame span{display:block;width:72%;height:34%;border:3px solid var(--accent);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.24)}
+.barcode-frame{position:absolute;inset:0;pointer-events:none}
+.barcode-frame span{position:absolute;left:7%;right:7%;top:18%;bottom:18%;border:2px solid var(--accent);border-radius:16px;box-shadow:0 0 0 999px rgba(0,0,0,.12)}
+.barcode-frame span:after{content:"";position:absolute;left:5%;right:5%;top:50%;height:2px;background:var(--accent);opacity:.8;transform:translateY(-50%)}
 .barcode-manual{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 </style>
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.18</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.19</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -92,7 +93,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.18</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.19</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -649,20 +650,29 @@ async function openBarcodeScanner(){
     }
     barcodeReader=new ZXingBrowser.BrowserMultiFormatReader();
     const video=document.getElementById('barcodeVideo');
-    const controls=await barcodeReader.decodeFromConstraints(
-      {video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},
-      video,
-      async (result,error)=>{
-        if(result && !barcodeBusy){
-          barcodeBusy=true;
-          const code=result.getText();
-          document.getElementById('barcodeStatus').textContent='Barcode erkannt: '+code;
-          await lookupBarcode(code);
-        }
+    const hints=new Map();
+    const formats=[
+      ZXingBrowser.BarcodeFormat?.EAN_13,
+      ZXingBrowser.BarcodeFormat?.EAN_8,
+      ZXingBrowser.BarcodeFormat?.UPC_A,
+      ZXingBrowser.BarcodeFormat?.UPC_E
+    ].filter(Boolean);
+    if(formats.length) hints.set(ZXingBrowser.DecodeHintType?.POSSIBLE_FORMATS,formats);
+    if(ZXingBrowser.DecodeHintType?.TRY_HARDER) hints.set(ZXingBrowser.DecodeHintType.TRY_HARDER,true);
+    if(typeof barcodeReader.setHints==='function') barcodeReader.setHints(hints);
+
+    const constraints={video:{facingMode:{ideal:'environment'},width:{ideal:1920,min:1280},height:{ideal:1080,min:720},focusMode:{ideal:'continuous'},zoom:{ideal:1}}};
+    const controls=await barcodeReader.decodeFromConstraints(constraints,video,async(result,error)=>{
+      if(result && !barcodeBusy){
+        barcodeBusy=true;
+        const code=result.getText();
+        document.getElementById('barcodeStatus').textContent='✓ Barcode erkannt: '+code;
+        try{ if(navigator.vibrate) navigator.vibrate(80); }catch(e){}
+        await lookupBarcode(code);
       }
-    );
+    });
     barcodeControls=controls;
-    document.getElementById('barcodeStatus').textContent='Barcode vor den Rahmen halten …';
+    document.getElementById('barcodeStatus').textContent='Barcode einfach ins Bild halten – der Scanner sucht automatisch.';
   }catch(e){
     console.error(e);
     document.getElementById('barcodeStatus').textContent='Kamera konnte nicht gestartet werden. Bitte Kamerazugriff erlauben oder Barcode manuell eingeben.';
