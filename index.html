@@ -43,11 +43,19 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 
 
-.legal-content{font-size:14px;line-height:1.55;color:var(--text);max-height:65vh;overflow:auto;padding-right:3px}.legal-content h3{font-size:20px;margin:0 0 14px}.legal-content h4{font-size:15px;margin:18px 0 6px}.legal-content p{margin:6px 0 12px}</style>
+.legal-content{font-size:14px;line-height:1.55;color:var(--text);max-height:65vh;overflow:auto;padding-right:3px}.legal-content h3{font-size:20px;margin:0 0 14px}.legal-content h4{font-size:15px;margin:18px 0 6px}.legal-content p{margin:6px 0 12px}
+<style>
+  /* Komfortlisten: standardmäßig Platz für ca. 3 Einträge, bei mehr Einträgen scrollbar. */
+  .food-scroll-box{max-height:235px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;padding-right:2px;}
+  .food-scroll-box::-webkit-scrollbar{width:7px;}
+  .food-scroll-box::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+  .food-scroll-box::-webkit-scrollbar-track{background:transparent;}
+</style>
+</style>
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></span><span class="version">V4.0</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></span><span class="version">V4.2</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -76,7 +84,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></span><span class="version">V4.0</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></span><span class="version">V4.2</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -210,6 +218,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
     <button class="save" aria-label="Lebensmittel suchen" onclick="searchFoods()" style="width:52px;height:52px;border-radius:12px;border:0;display:grid;place-items:center;font-size:27px;line-height:1;font-family:Arial,sans-serif">⌕</button>
   </div>
   <p class="label" id="searchStatus" style="margin:10px 0 6px"></p>
+  <div id="favoritesBox"></div>
   <div id="results"></div>
 
   <div id="selectedBox" style="display:none">
@@ -409,11 +418,45 @@ function saveManual(){
   render();
 }
 
+function favoriteFoods(){return JSON.parse(localStorage.getItem('kalorixFavoriteFoods')||'[]');}
+function isFavorite(food){
+  const name=normalizeFoodText(food?.name||food?.food||'');
+  return !!name && favoriteFoods().some(x=>normalizeFoodText(x.name||x.food||'')===name);
+}
+function toggleFavorite(food){
+  const clean={name:food.name||food.food||'',brand:food.brand||'',kcal:Number(food.kcal)||0,p:Number(food.p)||0,c:Number(food.c)||0,f:Number(food.f)||0};
+  if(!clean.name)return;
+  let arr=favoriteFoods();
+  const key=normalizeFoodText(clean.name);
+  const idx=arr.findIndex(x=>normalizeFoodText(x.name||x.food||'')===key);
+  if(idx>=0) arr.splice(idx,1); else arr.unshift(clean);
+  localStorage.setItem('kalorixFavoriteFoods',JSON.stringify(arr.slice(0,80)));
+  renderFavorites();
+  // Refresh visible results so the star changes immediately.
+  if(searchFood.value.trim().length>=2) searchFoods();
+  else renderRecentFoods();
+}
+function renderFavorites(){
+  const arr=favoriteFoods().slice(0,8);
+  const box=document.getElementById('favoritesBox');
+  if(!box)return;
+  box.innerHTML=`<div class="food-scroll-box" style="background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px;margin:4px 0 10px">
+    <strong>⭐ Meine Favoriten</strong>
+    ${arr.length?arr.map(x=>`<div style="display:flex;align-items:center;gap:7px;margin-top:7px">
+      <button onclick='selectFood(${JSON.stringify(x).replace(/'/g,"&#39;")})' style="flex:1;text-align:left;background:transparent;color:var(--text);border:0;padding:6px 0;cursor:pointer">
+        <strong>${escapeHtml(x.name)}</strong>${x.brand?`<span class="label"> · ${escapeHtml(x.brand)}</span>`:''}
+        <div class="label" style="margin-top:2px">${Math.round(x.kcal)||'–'} kcal · ${Math.round(x.p)} g Protein · ${Math.round(x.c)} g KH · ${Math.round(x.f)} g Fett / 100 g</div>
+      </button>
+      <button onclick='toggleFavorite(${JSON.stringify(x).replace(/'/g,"&#39;")})' aria-label="Favorit entfernen" style="width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:20px">★</button>
+    </div>`).join(''):`<div class="label" style="margin-top:5px">Noch keine Favoriten. Tippe bei einem Lebensmittel auf ☆.</div>`}
+  </div>`;
+}
 function openAdd(preferredMeal=''){
   searchFood.value=''; results.innerHTML=''; searchStatus.textContent='';
   selectedBox.style.display='none'; selectedFood=null; amount.value=100;
   document.getElementById('meal').value=preferredMeal || 'Frühstück';
   dlg.showModal();
+  renderFavorites();
   renderRecentFoods();
 }
 function renderRecentFoods(){
@@ -429,12 +472,14 @@ function renderRecentFoods(){
     .filter((x,i,a)=>i===a.findIndex(y=>normalizeFoodText(y.name)===normalizeFoodText(x.name)))
     .slice(0,8);
 
-  searchStatus.textContent='Zuletzt verwendet';
+  // Favorites are shown first. The recent-foods section gets its own heading below.
+  searchStatus.textContent='';
   if(!arr.length){
-    results.innerHTML='<div style="background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:4px"><strong>Zuletzt verwendet</strong><div class="label" style="margin-top:5px">Noch keine Lebensmittel verwendet. Nach der ersten Auswahl erscheinen sie hier.</div></div>';
+    results.innerHTML='<div class="food-scroll-box" style="background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0 10px"><div style="font-weight:700;margin-bottom:2px">🕘 Zuletzt verwendet</div><div class="label" style="margin-top:5px">Noch keine Lebensmittel verwendet. Nach der ersten Auswahl erscheinen sie hier.</div></div>';
     return;
   }
-  showSearchResults(arr,'Zuletzt verwendet',true);
+  showSearchResults(arr,'',true);
+  results.innerHTML='<div class="food-scroll-box" style="background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0 10px"><div style="font-weight:700;margin-bottom:2px">🕘 Zuletzt verwendet</div>'+results.innerHTML+'</div>';
 }
 async function searchFoods(){
   const q=searchFood.value.trim().toLowerCase();
@@ -507,10 +552,13 @@ async function searchFoods(){
 }
 function showSearchResults(products,status,compact=false){
   searchStatus.textContent=status; results.innerHTML=products.map(x=>`
-    <button onclick='selectFood(${JSON.stringify(x).replace(/'/g,"&#39;")})' style="display:block;width:100%;text-align:left;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:12px;margin:7px 0">
-      <strong>${escapeHtml(x.name)}</strong>${x.brand?`<span class="label"> · ${escapeHtml(x.brand)}</span>`:''}
-      <div class="label" style="margin-top:4px">${Math.round(x.kcal)||'–'} kcal · ${Math.round(x.p)} g Protein · ${Math.round(x.c)} g KH · ${Math.round(x.f)} g Fett / 100 g</div>
-    </button>`).join('');
+    <div style="display:flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:8px 10px;margin:7px 0">
+      <button onclick='selectFood(${JSON.stringify(x).replace(/'/g,"&#39;")})' style="flex:1;display:block;text-align:left;background:transparent;color:var(--text);border:0;padding:4px;cursor:pointer">
+        <strong>${escapeHtml(x.name)}</strong>${x.brand?`<span class="label"> · ${escapeHtml(x.brand)}</span>`:''}
+        <div class="label" style="margin-top:4px">${Math.round(x.kcal)||'–'} kcal · ${Math.round(x.p)} g Protein · ${Math.round(x.c)} g KH · ${Math.round(x.f)} g Fett / 100 g</div>
+      </button>
+      <button onclick='toggleFavorite(${JSON.stringify(x).replace(/'/g,"&#39;")})' aria-label="${isFavorite(x)?'Favorit entfernen':'Als Favorit speichern'}" style="flex:0 0 42px;width:42px;height:42px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);font-size:22px;line-height:1">${isFavorite(x)?'★':'☆'}</button>
+    </div>`).join('');
 }
 function selectFood(obj){
   selectedFood=obj;
