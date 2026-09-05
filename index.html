@@ -63,7 +63,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.17</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.18</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -92,7 +92,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.17</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.18</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -681,50 +681,50 @@ function closeBarcodeScanner(){
 }
 
 async function lookupBarcode(rawCode){
-  const code=String(rawCode||'').trim();
-  if(!code){
-    document.getElementById('barcodeStatus').textContent='Bitte einen Barcode eingeben.';
-    barcodeBusy=false;
-    return;
-  }
-  if(!/^\d{8,18}$/.test(code)){
-    document.getElementById('barcodeStatus').textContent='Bitte einen gültigen Zahlen-Barcode eingeben.';
-    barcodeBusy=false;
-    return;
-  }
-  document.getElementById('barcodeStatus').textContent='Produkt wird gesucht …';
+  const original=String(rawCode||'').trim();
+  const code=original.replace(/\D/g,'');
+  const statusEl=document.getElementById('barcodeStatus');
+  if(!code){ statusEl.textContent='Bitte einen Barcode eingeben.'; barcodeBusy=false; return; }
+  if(code.length<7 || code.length>18){ statusEl.textContent='Bitte einen gültigen Zahlen-Barcode eingeben.'; barcodeBusy=false; return; }
+  statusEl.textContent='Produkt wird gesucht …\nBarcode: '+code;
+  const candidates=[...new Set([code, code.replace(/^0+(?=\d{8}$)/,''), code.length===12?'0'+code:code, code.length===13&&code.startsWith('0')?code.slice(1):code])];
+  const fields='code,product_name,brands,nutriments';
   try{
-    const url='https://world.openfoodfacts.org/api/v3/product/'+encodeURIComponent(code)+'.json?product_type=food&fields=code,product_name,brands,nutriments';
-    const res=await fetch(url,{headers:{'Accept':'application/json'}});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data=await res.json();
-    if(data.status!==1 || !data.product){
-      document.getElementById('barcodeStatus').textContent='Produkt nicht gefunden. Du kannst den Barcode erneut scannen oder manuell suchen.';
-      barcodeBusy=false;
-      return;
+    let data=null, foundCode=null;
+    for(const candidate of candidates){
+      const urls=[
+        'https://world.openfoodfacts.org/api/v3/product/'+encodeURIComponent(candidate)+'?product_type=food&cc=de&lc=de&fields='+fields,
+        'https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(candidate)+'.json?product_type=food&fields='+fields
+      ];
+      for(const url of urls){
+        try{
+          const res=await fetch(url,{headers:{'Accept':'application/json'}});
+          if(!res.ok) continue;
+          const d=await res.json();
+          if((d.status===1 || d.status==='success') && d.product){ data=d; foundCode=candidate; break; }
+        }catch(e){ console.warn('Barcode API attempt failed',e); }
+      }
+      if(data) break;
+    }
+    if(!data){
+      statusEl.textContent='Produkt nicht gefunden. Erkannt wurde: '+code+'\nDu kannst den Barcode erneut scannen oder manuell suchen.';
+      barcodeBusy=false; return;
     }
     const p=data.product, n=p.nutriments||{};
-    const food={
-      name:p.product_name||'Unbekanntes Produkt',
-      brand:p.brands||'',
-      code:String(data.code||code),
-      kcal:Number(n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0),
-      p:Number(n.proteins_100g ?? 0),
-      c:Number(n.carbohydrates_100g ?? 0),
-      f:Number(n.fat_100g ?? 0)
-    };
+    const kcal=Number(n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0);
+    const food={name:p.product_name||'Unbekanntes Produkt',brand:p.brands||'',code:String(p.code||foundCode||code),kcal,p:Number(n.proteins_100g??0),c:Number(n.carbohydrates_100g??0),f:Number(n.fat_100g??0)};
     if(!(food.kcal||food.p||food.c||food.f)){
-      document.getElementById('barcodeStatus').textContent='Produkt gefunden, aber keine verwertbaren Nährwerte vorhanden.';
-      barcodeBusy=false;
-      return;
+      statusEl.textContent='Produkt gefunden, aber keine verwertbaren Nährwerte vorhanden. Erkannt wurde: '+code;
+      barcodeBusy=false; return;
     }
+    try{ if(navigator.vibrate) navigator.vibrate(120); }catch(e){}
     closeBarcodeScanner();
     selectFood(food);
     searchFood.value='';
-    searchStatus.textContent='Produkt per Barcode gefunden';
+    searchStatus.textContent='Produkt per Barcode gefunden: '+food.name;
   }catch(e){
     console.error(e);
-    document.getElementById('barcodeStatus').textContent='Online-Suche fehlgeschlagen. Bitte Internetverbindung prüfen oder Barcode manuell suchen.';
+    statusEl.textContent='Online-Suche fehlgeschlagen. Barcode erkannt: '+code+'\nBitte Internetverbindung prüfen oder Barcode manuell suchen.';
     barcodeBusy=false;
   }
 }
