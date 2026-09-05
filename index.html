@@ -50,12 +50,13 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
   .food-scroll-box::-webkit-scrollbar{width:7px;}
   .food-scroll-box::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
   .food-scroll-box::-webkit-scrollbar-track{background:transparent;}
+.saved-meal-row{display:flex;align-items:center;gap:7px;margin-top:7px}.saved-meal-add{flex:1;text-align:left;background:transparent;color:var(--text);border:0;padding:6px 0;cursor:pointer}.saved-meal-add strong{font-size:14px}.saved-meal-meta{font-size:12px;color:var(--muted);margin-top:2px}.saved-meal-delete{width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--danger);font-size:18px}
 </style>
 </style>
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.10</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.11</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -84,7 +85,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.10</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.11</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -218,6 +219,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
     <button class="save" aria-label="Lebensmittel suchen" onclick="searchFoods()" style="width:52px;height:52px;border-radius:12px;border:0;display:grid;place-items:center;font-size:27px;line-height:1;font-family:Arial,sans-serif">⌕</button>
   </div>
   <p class="label" id="searchStatus" style="margin:10px 0 6px"></p>
+  <div id="savedMealsBox"></div>
   <div id="favoritesBox"></div>
   <div id="results"></div>
 
@@ -418,6 +420,54 @@ function saveManual(){
   render();
 }
 
+function savedMeals(){return JSON.parse(localStorage.getItem('kalorixSavedMeals')||'[]');}
+function saveCurrentMeal(mealName){
+  const items=(foods||[]).filter(x=>x.meal===mealName).map(x=>({
+    food:x.food||'', brand:x.brand||'', kcal:Number(x.kcal)||0, p:Number(x.p)||0, c:Number(x.c)||0, f:Number(x.f)||0
+  })).filter(x=>x.food);
+  if(!items.length){alert('In dieser Mahlzeit sind noch keine Lebensmittel eingetragen.');return;}
+  const name=prompt('Name für die gespeicherte Mahlzeit:', mealName==='Frühstück'?'Mein Frühstück':mealName==='Mittagessen'?'Mein Mittagessen':mealName==='Abendessen'?'Mein Abendessen':'Mein Snack');
+  if(!name || !name.trim())return;
+  const cleanName=name.trim();
+  let arr=savedMeals().filter(x=>String(x.name||'').toLowerCase()!==cleanName.toLowerCase());
+  arr.unshift({name:cleanName,items});
+  localStorage.setItem('kalorixSavedMeals',JSON.stringify(arr.slice(0,30)));
+  alert('Mahlzeit wurde gespeichert.');
+}
+function deleteSavedMeal(index){
+  const arr=savedMeals();
+  const item=arr[index];
+  if(!item)return;
+  if(!confirm(`„${item.name}“ wirklich löschen?`))return;
+  arr.splice(index,1);
+  localStorage.setItem('kalorixSavedMeals',JSON.stringify(arr));
+  renderSavedMeals();
+}
+function addSavedMeal(index){
+  const arr=savedMeals(); const saved=arr[index];
+  if(!saved || !Array.isArray(saved.items) || !saved.items.length)return;
+  const targetMeal=document.getElementById('meal')?.value || 'Frühstück';
+  saved.items.forEach(x=>foods.push({
+    food:x.food, brand:x.brand||'', meal:targetMeal, kcal:Math.round(Number(x.kcal)||0),
+    p:Math.round((Number(x.p)||0)*10)/10, c:Math.round((Number(x.c)||0)*10)/10, f:Math.round((Number(x.f)||0)*10)/10
+  }));
+  syncToday(); localStorage.setItem('kalorixFoods',JSON.stringify(foods));
+  dlg.close(); render();
+}
+function renderSavedMeals(){
+  const box=document.getElementById('savedMealsBox'); if(!box)return;
+  const arr=savedMeals();
+  box.innerHTML=`<div class="food-scroll-box" style="background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px;margin:4px 0 10px">
+    <div style="font-weight:700;margin-bottom:2px">💾 Gespeicherte Mahlzeiten</div>
+    ${arr.length?arr.map((x,i)=>{
+      const total=(x.items||[]).reduce((sum,y)=>sum+(Number(y.kcal)||0),0);
+      return `<div class="saved-meal-row">
+        <button class="saved-meal-add" onclick="addSavedMeal(${i})"><strong>${escapeHtml(x.name||'Mahlzeit')}</strong><div class="saved-meal-meta">${(x.items||[]).length} Lebensmittel · ${Math.round(total)} kcal</div></button>
+        <button class="saved-meal-delete" onclick="deleteSavedMeal(${i})" aria-label="Gespeicherte Mahlzeit löschen">×</button>
+      </div>`;
+    }).join(''):`<div class="label" style="margin-top:5px">Noch keine gespeicherten Mahlzeiten. Speichere eine Mahlzeit über „Mahlzeit speichern“.</div>`}
+  </div>`;
+}
 function favoriteFoods(){return JSON.parse(localStorage.getItem('kalorixFavoriteFoods')||'[]');}
 function isFavorite(food){
   const name=normalizeFoodText(food?.name||food?.food||'');
@@ -456,6 +506,7 @@ function openAdd(preferredMeal=''){
   selectedBox.style.display='none'; selectedFood=null; amount.value=100;
   document.getElementById('meal').value=preferredMeal || 'Frühstück';
   dlg.showModal();
+  renderSavedMeals();
   renderFavorites();
   renderRecentFoods();
 }
@@ -627,7 +678,7 @@ function render(){
    const sum=arr.reduce((a,x)=>a+x.kcal,0);
    return `<div class="meal"><div class="meal-left">
       <button type="button" onclick="openAdd('${g}')" aria-label="${g} hinzufügen" style="width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--accent);font-size:23px;line-height:1;font-weight:700;padding:0;display:grid;place-items:center;flex:none">+</button>
-      <div class="icon">${g==='Frühstück'?'☕':g==='Mittagessen'?'🥗':g==='Abendessen'?'🍽️':'🍎'}</div><div><h3>${g}</h3><p>${arr.length?arr.map(x=>`${escapeHtml(x.food)} · ${x.kcal} kcal <button onclick="removeFood(${x.i})" style="background:none;border:0;color:var(--danger)">×</button>`).join('<br>'):'Noch nichts eingetragen'}</p></div></div><div class="kcal">${sum} kcal</div></div>`
+      <div class="icon">${g==='Frühstück'?'☕':g==='Mittagessen'?'🥗':g==='Abendessen'?'🍽️':'🍎'}</div><div><h3>${g}</h3><p>${arr.length?arr.map(x=>`${escapeHtml(x.food)} · ${x.kcal} kcal <button onclick="removeFood(${x.i})" style="background:none;border:0;color:var(--danger)">×</button>`).join('<br>'):'Noch nichts eingetragen'}</p>${arr.length?`<button type="button" onclick="saveCurrentMeal('${g}')" style="margin-top:7px;background:none;border:0;color:var(--accent);font-size:12px;font-weight:700;padding:0;cursor:pointer">💾 Mahlzeit speichern</button>`:''}</div></div><div class="kcal">${sum} kcal</div></div>`
  }).join('');
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
