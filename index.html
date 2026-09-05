@@ -735,17 +735,9 @@ function periodData(){
       values:weeks.map(w=>w.value),
       weights:weeks.map(w=>w.weight),
       recordedDays:weeks.reduce((sum,w)=>sum+w.recordedDays,0),
-      // Gesamtkalorien des Monats direkt aus allen abgeschlossenen Tagen berechnen.
-      // Nicht über die Kalenderwochen summieren, sondern exakt wie beim Jahr.
-      totalKcal:(()=>{
-        const todayKeyLocal=today.toISOString().slice(0,10);
-        return Object.keys(historyData)
-          .filter(day=>day!==todayKeyLocal)
-          .filter(day=>{ const dt=dateObj(day); return dt && dt.getFullYear()===today.getFullYear() && dt.getMonth()===today.getMonth(); })
-          .map(day=>dayTotals(day).kcal)
-          .filter(v=>v>0)
-          .reduce((a,b)=>a+b,0);
-      })()
+      // Gesamtkalorien exakt aus denselben abgeschlossenen Tagen wie die 7 Kalenderwochen berechnen.
+      // Heute bleibt außen vor; die Monatsansicht umfasst den kompletten dargestellten 7-Kalenderwochen-Zeitraum.
+      totalKcal:weeks.reduce((sum,w)=>sum+(w.recordedTotal||0),0)
     };
   }
 
