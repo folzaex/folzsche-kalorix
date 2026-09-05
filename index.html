@@ -247,19 +247,79 @@ let goal=profile?.goal || 1850;
 const dlg=document.getElementById('dlg');
 const profileDlg=document.getElementById('profileDlg');
 const localFoods = [
-  {name:"Banane", brand:"", kcal:89, p:1.1, c:22.8, f:0.3},
-  {name:"Apfel", brand:"", kcal:52, p:0.3, c:13.8, f:0.2},
-  {name:"Haferflocken", brand:"", kcal:372, p:13.5, c:58.7, f:7.0},
-  {name:"Hähnchenbrust", brand:"", kcal:120, p:22.5, c:0, f:2.6},
-  {name:"Ei", brand:"", kcal:143, p:12.6, c:0.7, f:9.5},
-  {name:"Reis, gekocht", brand:"", kcal:130, p:2.7, c:28.2, f:0.3},
-  {name:"Kartoffeln, gekocht", brand:"", kcal:87, p:1.9, c:20.1, f:0.1},
-  {name:"Lachs", brand:"", kcal:208, p:20.4, c:0, f:13.4},
-  {name:"Joghurt natur", brand:"", kcal:61, p:3.5, c:4.7, f:3.3},
-  {name:"Brokkoli", brand:"", kcal:34, p:2.8, c:7.0, f:0.4},
-  {name:"Vollkornbrot", brand:"", kcal:247, p:8.5, c:41.0, f:3.5},
-  {name:"Milch 1,5%", brand:"", kcal:47, p:3.4, c:4.9, f:1.5}
+  {name:"Banane",brand:"",kcal:89,p:1.1,c:22.8,f:0.3,aliases:"bananen banana"},
+  {name:"Apfel",brand:"",kcal:52,p:0.3,c:13.8,f:0.2,aliases:"äpfel apple"},
+  {name:"Birne",brand:"",kcal:57,p:0.4,c:15.2,f:0.1,aliases:"birnen pear"},
+  {name:"Orange",brand:"",kcal:47,p:0.9,c:11.8,f:0.1,aliases:"orangen apfelsine"},
+  {name:"Mandarine",brand:"",kcal:53,p:0.8,c:13.3,f:0.3,aliases:"mandarinen clementine"},
+  {name:"Erdbeeren",brand:"",kcal:32,p:0.7,c:7.7,f:0.3,aliases:"erdbeere strawberry"},
+  {name:"Heidelbeeren",brand:"",kcal:57,p:0.7,c:14.5,f:0.3,aliases:"blaubeeren blueberry"},
+  {name:"Weintrauben",brand:"",kcal:69,p:0.7,c:18.1,f:0.2,aliases:"trauben grapes"},
+  {name:"Avocado",brand:"",kcal:160,p:2.0,c:8.5,f:14.7,aliases:"avocados"},
+  {name:"Tomate",brand:"",kcal:18,p:0.9,c:3.9,f:0.2,aliases:"tomaten"},
+  {name:"Gurke",brand:"",kcal:15,p:0.7,c:3.6,f:0.1,aliases:"gurken cucumber"},
+  {name:"Karotte",brand:"",kcal:41,p:0.9,c:9.6,f:0.2,aliases:"möhren moehren karotten carrot"},
+  {name:"Brokkoli",brand:"",kcal:34,p:2.8,c:7.0,f:0.4,aliases:"broccoli"},
+  {name:"Blumenkohl",brand:"",kcal:25,p:1.9,c:5.0,f:0.3,aliases:"blumenkohl cauliflower"},
+  {name:"Paprika",brand:"",kcal:31,p:1.0,c:6.0,f:0.3,aliases:"paprikaschote paprika rot gelb grün"},
+  {name:"Spinat",brand:"",kcal:23,p:2.9,c:3.6,f:0.4,aliases:"spinach"},
+  {name:"Hähnchenbrust",brand:"",kcal:120,p:22.5,c:0,f:2.6,aliases:"huhn huhn chicken hähnchen poulet"},
+  {name:"Hähnchenschenkel",brand:"",kcal:209,p:18.6,c:0,f:14.3,aliases:"huhn chicken schenkel"},
+  {name:"Putenbrust",brand:"",kcal:111,p:24.0,c:0,f:1.0,aliases:"pute turkey putenfilet"},
+  {name:"Rindfleisch, mager",brand:"",kcal:158,p:26.0,c:0,f:6.0,aliases:"rind beef steak"},
+  {name:"Schweinefleisch, mager",brand:"",kcal:143,p:21.0,c:0,f:6.0,aliases:"schwein pork"},
+  {name:"Lachs",brand:"",kcal:208,p:20.4,c:0,f:13.4,aliases:"salmon"},
+  {name:"Thunfisch, im eigenen Saft",brand:"",kcal:116,p:25.5,c:0,f:0.8,aliases:"thunfisch tuna"},
+  {name:"Ei",brand:"",kcal:143,p:12.6,c:0.7,f:9.5,aliases:"eier ei hühnerei eggs"},
+  {name:"Tofu",brand:"",kcal:144,p:17.0,c:2.8,f:8.0,aliases:"tofu natur"},
+  {name:"Haferflocken",brand:"",kcal:372,p:13.5,c:58.7,f:7.0,aliases:"hafer oats porridge"},
+  {name:"Reis, gekocht",brand:"",kcal:130,p:2.7,c:28.2,f:0.3,aliases:"reis rice gekochter reis"},
+  {name:"Nudeln, gekocht",brand:"",kcal:158,p:5.8,c:30.9,f:0.9,aliases:"pasta spaghetti nudeln pasta gekocht"},
+  {name:"Kartoffeln, gekocht",brand:"",kcal:87,p:1.9,c:20.1,f:0.1,aliases:"kartoffel kartoffeln potato pommes"},
+  {name:"Süßkartoffel, gekocht",brand:"",kcal:76,p:1.4,c:17.7,f:0.1,aliases:"süßkartoffeln sweet potato"},
+  {name:"Vollkornbrot",brand:"",kcal:247,p:8.5,c:41.0,f:3.5,aliases:"brot vollkornbrot vollkorn brot"},
+  {name:"Brötchen",brand:"",kcal:270,p:9.0,c:53.0,f:2.5,aliases:"semmel weck"},
+  {name:"Toastbrot",brand:"",kcal:265,p:8.0,c:49.0,f:3.5,aliases:"toast toastbrot"},
+  {name:"Joghurt natur",brand:"",kcal:61,p:3.5,c:4.7,f:3.3,aliases:"joghurt yogurt naturjoghurt"},
+  {name:"Skyr natur",brand:"",kcal:63,p:11.0,c:4.0,f:0.2,aliases:"skyr islandjoghurt"},
+  {name:"Quark, Magerstufe",brand:"",kcal:67,p:12.0,c:4.0,f:0.2,aliases:"magerquark quark"},
+  {name:"Milch 1,5%",brand:"",kcal:47,p:3.4,c:4.9,f:1.5,aliases:"milch milk halbfett"},
+  {name:"Käse, Gouda",brand:"",kcal:356,p:25.0,c:0.0,f:27.0,aliases:"gouda käse cheese"},
+  {name:"Mozzarella",brand:"",kcal:280,p:28.0,c:3.0,f:17.0,aliases:"mozzarella käse"},
+  {name:"Butter",brand:"",kcal:717,p:0.9,c:0.1,f:81.1,aliases:"butter"},
+  {name:"Olivenöl",brand:"",kcal:884,p:0,c:0,f:100,aliases:"oliven öl olive oil"},
+  {name:"Rapsöl",brand:"",kcal:884,p:0,c:0,f:100,aliases:"raps öl canola"},
+  {name:"Mandeln",brand:"",kcal:579,p:21.2,c:21.6,f:49.9,aliases:"mandel almonds"},
+  {name:"Walnüsse",brand:"",kcal:654,p:15.2,c:13.7,f:65.2,aliases:"walnuss walnuts"},
+  {name:"Erdnüsse",brand:"",kcal:567,p:25.8,c:16.1,f:49.2,aliases:"erdnuss peanuts"},
+  {name:"Honig",brand:"",kcal:304,p:0.3,c:82.4,f:0,aliases:"honey"},
+  {name:"Marmelade",brand:"",kcal:250,p:0.4,c:62.0,f:0.1,aliases:"konfitüre marmelade jam"},
+  {name:"Schokolade, Vollmilch",brand:"",kcal:535,p:7.6,c:59.4,f:29.7,aliases:"schokolade chocolate"},
+  {name:"Haferdrink",brand:"",kcal:46,p:1.0,c:6.7,f:1.5,aliases:"hafermilch oat drink"},
+  {name:"Apfelsaft",brand:"",kcal:46,p:0.1,c:11.3,f:0.1,aliases:"apfelsaft apple juice"},
+  {name:"Orangensaft",brand:"",kcal:45,p:0.7,c:10.4,f:0.2,aliases:"orangensaft orange juice"}
 ];
+
+const personalFoods=()=>JSON.parse(localStorage.getItem('kalorixPersonalFoods')||'[]');
+function savePersonalFood(food){
+  const clean={name:food.name||food.food,brand:food.brand||'',kcal:Number(food.kcal)||0,p:Number(food.p)||0,c:Number(food.c)||0,f:Number(food.f)||0,aliases:food.aliases||''};
+  if(!clean.name || !(clean.kcal||clean.p||clean.c||clean.f)) return;
+  let arr=personalFoods().filter(x=>x.name.toLowerCase()!==clean.name.toLowerCase());
+  arr.unshift(clean);
+  localStorage.setItem('kalorixPersonalFoods',JSON.stringify(arr.slice(0,80)));
+}
+function normalizeFoodText(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ß/g,'ss');}
+function rankFood(x,q){
+  const n=normalizeFoodText(x.name), a=normalizeFoodText(x.aliases), b=normalizeFoodText(x.brand);
+  if(n===q) return 1000;
+  if(n.startsWith(q)) return 800;
+  if(a.split(/\s+/).some(v=>v===q)) return 700;
+  if(n.includes(q)) return 600;
+  if(a.includes(q)) return 500;
+  if(b.includes(q)) return 400;
+  return 0;
+}
+
 
 let selectedFood=null;
 
@@ -334,6 +394,8 @@ function saveManual(){
   if(!name){alert('Bitte eine Bezeichnung eingeben.');return;}
   if(!kcal){alert('Bitte Kalorien eingeben.');return;}
 
+  const manualFood={name:name,brand:'',kcal:Math.round(kcal),p:Math.round(p*10)/10,c:Math.round(c*10)/10,f:Math.round(f*10)/10};
+  savePersonalFood(manualFood);
   foods.push({
     food:name,
     meal:document.getElementById('manualMeal').value,
@@ -352,17 +414,27 @@ function openAdd(preferredMeal=''){
   selectedBox.style.display='none'; selectedFood=null; amount.value=100;
   document.getElementById('meal').value=preferredMeal || 'Frühstück';
   dlg.showModal();
+  renderRecentFoods();
+}
+function renderRecentFoods(){
+  const arr=personalFoods().slice(0,8);
+  if(!arr.length){results.innerHTML='<p class="label">Suche nach einem Lebensmittel – z. B. Banane, Reis oder Hähnchen.</p>';return;}
+  searchStatus.textContent='Zuletzt verwendet';
+  showSearchResults(arr,'Zuletzt verwendet',true);
 }
 async function searchFoods(){
   const q=searchFood.value.trim().toLowerCase();
   if(q.length<2){searchStatus.textContent='Bitte mindestens 2 Zeichen eingeben.';return}
 
-  const localMatches=localFoods.filter(x=>
-    x.name.toLowerCase().includes(q) || (x.brand||'').toLowerCase().includes(q)
-  );
+  const combined=[...personalFoods(),...localFoods];
+  const localMatches=combined
+    .map(x=>({...x,_rank:rankFood(x,q)}))
+    .filter(x=>x._rank>0)
+    .sort((a,b)=>b._rank-a._rank)
+    .filter((x,i,arr)=>i===arr.findIndex(y=>normalizeFoodText(y.name)===normalizeFoodText(x.name)));
 
   if(localMatches.length){
-    showSearchResults(localMatches, `${localMatches.length} Treffer`);
+    showSearchResults(localMatches.slice(0,12), `${localMatches.length} Treffer`);
     // Try the online database as a supplement, but never let it block local results.
     try{
       const controller=new AbortController();
@@ -419,7 +491,7 @@ async function searchFoods(){
     searchStatus.textContent='Dieses Lebensmittel ist noch nicht offline hinterlegt. Bitte später erneut versuchen oder einen anderen Suchbegriff verwenden.';
   }
 }
-function showSearchResults(products,status){
+function showSearchResults(products,status,compact=false){
   searchStatus.textContent=status; results.innerHTML=products.map(x=>`
     <button onclick='selectFood(${JSON.stringify(x).replace(/'/g,"&#39;")})' style="display:block;width:100%;text-align:left;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:12px;margin:7px 0">
       <strong>${escapeHtml(x.name)}</strong>${x.brand?`<span class="label"> · ${escapeHtml(x.brand)}</span>`:''}
@@ -428,6 +500,7 @@ function showSearchResults(products,status){
 }
 function selectFood(obj){
   selectedFood=obj;
+  savePersonalFood(obj);
   selectedName.textContent=obj.name;
   selectedInfo.textContent=`${obj.brand?obj.brand+' · ':''}${Math.round(obj.kcal)} kcal · ${Math.round(obj.p)} g Protein · ${Math.round(obj.c)} g KH · ${Math.round(obj.f)} g Fett / 100 g`;
   selectedBox.style.display='block'; results.innerHTML=''; searchStatus.textContent='Ausgewählt';
@@ -444,6 +517,7 @@ document.getElementById('amount').addEventListener('input',updateCalculated);
 function addSelected(){
   if(!selectedFood){alert('Bitte zuerst ein Lebensmittel auswählen.');return}
   const m=Math.max(1,+amount.value||100)/100;
+  savePersonalFood(selectedFood);
   foods.push({food:selectedFood.name,meal:meal.value,kcal:Math.round(selectedFood.kcal*m),p:Math.round(selectedFood.p*m*10)/10,c:Math.round(selectedFood.c*m*10)/10,f:Math.round(selectedFood.f*m*10)/10});
   syncToday(); localStorage.setItem('kalorixFoods',JSON.stringify(foods)); dlg.close(); render();
 }
