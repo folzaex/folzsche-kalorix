@@ -56,7 +56,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.15</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.16</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -85,7 +85,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.15</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.16</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -906,7 +906,6 @@ function renderHistory(){
       }
 
       document.getElementById('weightChart').innerHTML=`
-        <div class="weight-current-label">${current.toFixed(1)} kg aktuell</div>
         <div class="weight-progress">
           <div class="weight-progress-track">
             <div class="weight-progress-fill" style="width:${progress}%"></div>
