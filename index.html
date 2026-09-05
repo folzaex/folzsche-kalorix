@@ -68,7 +68,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.20</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.21</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -97,7 +97,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.20</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.21</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -263,7 +263,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
   <div class="barcode-preview">
     <video id="barcodeVideo" playsinline muted></video>
     <div class="barcode-frame"><span></span></div>
-    <div class="barcode-tip">Barcode irgendwo ins Kamerabild halten – der Scanner sucht automatisch.</div>
+    <div class="barcode-tip">Barcode irgendwo ins Bild halten – nicht exakt ausrichten. <span id="barcodeDebug">Bereit</span></div>
   </div>
   <div class="barcode-controls">
     <button type="button" id="barcodeTorchBtn" onclick="toggleBarcodeTorch()" style="display:none">🔦 Licht</button>
@@ -645,10 +645,19 @@ let barcodeBusy=false;
 let barcodeStream=null;
 let barcodeTrack=null;
 let barcodeTorchOn=false;
+let barcodeNativeTimer=null;
+let barcodeNativeRunning=false;
+let barcodeNativeDetector=null;
+let barcodeCanvas=null;
+let barcodeLastDebug=0;
 const barcodeDlg=document.getElementById('barcodeDlg');
 
 function barcodeSetStatus(text){
   const el=document.getElementById('barcodeStatus');
+  if(el) el.textContent=text;
+}
+function barcodeSetDebug(text){
+  const el=document.getElementById('barcodeDebug');
   if(el) el.textContent=text;
 }
 
@@ -668,7 +677,6 @@ function updateBarcodeCameraControls(){
     torchBtn.style.display=caps.torch ? 'inline-block' : 'none';
     torchBtn.textContent=barcodeTorchOn ? '🔦 Licht aus' : '🔦 Licht';
   }
-
   if(zoom && caps.zoom){
     zoom.style.display='block';
     zoom.min=String(caps.zoom.min ?? 1);
@@ -704,7 +712,93 @@ async function toggleBarcodeTorch(){
   }
 }
 
+function normalizeDetectedCode(value){
+  return String(value ?? '').replace(/\D/g,'').trim();
+}
+
+async function handleDetectedBarcode(code, source='Kamera'){
+  code=normalizeDetectedCode(code);
+  if(!code || barcodeBusy) return false;
+  if(code.length<7 || code.length>18) return false;
+
+  barcodeBusy=true;
+  barcodeSetStatus('✓ Barcode erkannt: '+code);
+  barcodeSetDebug(source);
+  try{ if(navigator.vibrate) navigator.vibrate(80); }catch(e){}
+
+  stopBarcodeCamera();
+  try{
+    await lookupBarcode(code);
+  }catch(e){
+    console.error(e);
+    barcodeSetStatus('Produkt konnte nicht geladen werden. Barcode: '+code);
+    barcodeBusy=false;
+  }
+  return true;
+}
+
+async function nativeBarcodeLoop(){
+  if(barcodeNativeRunning || barcodeBusy || !barcodeNativeDetector) return;
+  barcodeNativeRunning=true;
+
+  const video=document.getElementById('barcodeVideo');
+  if(!video || video.readyState<2 || !video.videoWidth){
+    barcodeNativeRunning=false;
+    return;
+  }
+
+  try{
+    // Detect on the full frame. Native detectors are often much better than
+    // a manually cropped ROI because the device can choose its own strategy.
+    const results=await barcodeNativeDetector.detect(video);
+    if(results?.length){
+      for(const item of results){
+        const code=normalizeDetectedCode(item.rawValue);
+        if(await handleDetectedBarcode(code,'Native Kamera')) break;
+      }
+    }
+  }catch(e){
+    // Some browsers throw transiently while the camera is starting. Ignore those.
+  }finally{
+    barcodeNativeRunning=false;
+  }
+}
+
+function startNativeBarcodeDetection(){
+  if(!('BarcodeDetector' in window)) return false;
+
+  try{
+    const wanted=['ean_13','ean_8','upc_a','upc_e','code_128'];
+    const supported=typeof BarcodeDetector.getSupportedFormats==='function'
+      ? null
+      : null;
+
+    barcodeNativeDetector=new BarcodeDetector({formats:wanted});
+  }catch(e){
+    try{ barcodeNativeDetector=new BarcodeDetector(); }
+    catch(err){
+      barcodeNativeDetector=null;
+      return false;
+    }
+  }
+
+  barcodeNativeTimer=setInterval(nativeBarcodeLoop, 180);
+  barcodeSetDebug('Native Scanner aktiv');
+  return true;
+}
+
+function stopNativeBarcodeDetection(){
+  if(barcodeNativeTimer){
+    clearInterval(barcodeNativeTimer);
+    barcodeNativeTimer=null;
+  }
+  barcodeNativeDetector=null;
+  barcodeNativeRunning=false;
+}
+
 function stopBarcodeCamera(){
+  stopNativeBarcodeDetection();
+
   try{ if(barcodeControls) barcodeControls.stop(); }catch(e){}
   barcodeControls=null;
   try{ if(barcodeReader) barcodeReader.reset(); }catch(e){}
@@ -727,92 +821,123 @@ function stopBarcodeCamera(){
 
 async function openBarcodeScanner(){
   barcodeBusy=false;
+  stopBarcodeCamera();
   document.getElementById('barcodeInput').value='';
   barcodeSetStatus('Kamera wird gestartet …');
+  barcodeSetDebug('Starte Kamera …');
   barcodeDlg.showModal();
 
   try{
     if(!window.isSecureContext){
       barcodeSetStatus('Der Scanner benötigt eine sichere Verbindung (HTTPS).');
+      barcodeSetDebug('HTTPS erforderlich');
       return;
     }
 
-    if(!window.ZXingBrowser?.BrowserMultiFormatReader && !window.ZXingBrowser?.BrowserMultiFormatReader){
-      barcodeSetStatus('Scanner konnte nicht geladen werden. Bitte Barcode manuell eingeben.');
+    if(!navigator.mediaDevices?.getUserMedia){
+      barcodeSetStatus('Diese Kamera wird vom Browser nicht unterstützt. Bitte Barcode manuell eingeben.');
+      barcodeSetDebug('Kamera-API fehlt');
       return;
     }
-
-    barcodeReader=new ZXingBrowser.BrowserMultiFormatReader();
-
-    // Für Lebensmittel interessieren vor allem klassische 1D-Barcodes.
-    // TRY_HARDER erhöht die Toleranz, falls die Bibliothek die Hints unterstützt.
-    try{
-      const hints=new Map();
-      const formats=[
-        ZXingBrowser.BarcodeFormat?.EAN_13,
-        ZXingBrowser.BarcodeFormat?.EAN_8,
-        ZXingBrowser.BarcodeFormat?.UPC_A,
-        ZXingBrowser.BarcodeFormat?.UPC_E,
-        ZXingBrowser.BarcodeFormat?.CODE_128
-      ].filter(Boolean);
-      if(formats.length && ZXingBrowser.DecodeHintType?.POSSIBLE_FORMATS){
-        hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS,formats);
-      }
-      if(ZXingBrowser.DecodeHintType?.TRY_HARDER){
-        hints.set(ZXingBrowser.DecodeHintType.TRY_HARDER,true);
-      }
-      if(typeof barcodeReader.setHints==='function') barcodeReader.setHints(hints);
-    }catch(e){ console.warn('Barcode-Hints nicht verfügbar',e); }
 
     const video=document.getElementById('barcodeVideo');
 
+    // First get a real camera stream. The stream itself is reused by both
+    // the native detector and ZXing fallback.
     const constraints={
       audio:false,
       video:{
         facingMode:{ideal:'environment'},
         width:{ideal:1920,min:1280},
         height:{ideal:1080,min:720},
+        frameRate:{ideal:30,min:15},
         focusMode:{ideal:'continuous'}
       }
     };
 
-    const controls=await barcodeReader.decodeFromConstraints(
-      constraints,
-      video,
-      async(result,error)=>{
-        if(result && !barcodeBusy){
-          barcodeBusy=true;
-          const code=(result.getText?.() || '').replace(/\D/g,'');
-          if(!code){
-            barcodeBusy=false;
-            return;
-          }
-          barcodeSetStatus('✓ Barcode erkannt: '+code);
-          try{ if(navigator.vibrate) navigator.vibrate(80); }catch(e){}
+    barcodeStream=await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject=barcodeStream;
+    barcodeTrack=barcodeStream.getVideoTracks()[0] || null;
+    await video.play().catch(()=>{});
+    updateBarcodeCameraControls();
 
-          // Scanner sofort stoppen, damit Kamera und API nicht gegeneinander laufen.
-          stopBarcodeCamera();
+    // Give the native detector priority when the browser supports it.
+    const nativeStarted=startNativeBarcodeDetection();
+    if(nativeStarted){
+      barcodeSetStatus('Barcode ins Bild halten – automatische Erkennung läuft …');
+      barcodeSetDebug('Native Scanner + Fallback wird vorbereitet');
+    }else{
+      barcodeSetStatus('Barcode ins Bild halten – automatische Erkennung läuft …');
+      barcodeSetDebug('ZXing Fallback');
+    }
 
-          try{
-            await lookupBarcode(code);
-          }catch(e){
-            console.error(e);
-            barcodeSetStatus('Produkt konnte nicht geladen werden. Barcode: '+code);
-            barcodeBusy=false;
+    // ZXing runs continuously as a second recognition engine.
+    if(window.ZXingBrowser?.BrowserMultiFormatReader){
+      try{
+        barcodeReader=new ZXingBrowser.BrowserMultiFormatReader();
+
+        try{
+          const hints=new Map();
+          const formats=[
+            ZXingBrowser.BarcodeFormat?.EAN_13,
+            ZXingBrowser.BarcodeFormat?.EAN_8,
+            ZXingBrowser.BarcodeFormat?.UPC_A,
+            ZXingBrowser.BarcodeFormat?.UPC_E,
+            ZXingBrowser.BarcodeFormat?.CODE_128
+          ].filter(Boolean);
+          if(formats.length && ZXingBrowser.DecodeHintType?.POSSIBLE_FORMATS){
+            hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS,formats);
           }
+          if(ZXingBrowser.DecodeHintType?.TRY_HARDER){
+            hints.set(ZXingBrowser.DecodeHintType.TRY_HARDER,true);
+          }
+          if(typeof barcodeReader.setHints==='function') barcodeReader.setHints(hints);
+        }catch(e){ console.warn('Barcode-Hints nicht verfügbar',e); }
+
+        // Do not request another camera stream if possible. ZXing gets the same
+        // video element, which avoids two competing camera sessions.
+        const controls=await barcodeReader.decodeFromVideoDevice(
+          undefined,
+          video,
+          async(result,error)=>{
+            if(result && !barcodeBusy){
+              const code=result.getText?.() || '';
+              await handleDetectedBarcode(code,'ZXing');
+            }
+          }
+        );
+        barcodeControls=controls;
+        barcodeSetDebug(nativeStarted ? '2 Scanner aktiv' : 'ZXing aktiv');
+      }catch(e){
+        console.warn('ZXing konnte nicht gestartet werden',e);
+        if(!nativeStarted){
+          barcodeSetStatus('Scanner konnte nicht gestartet werden. Bitte Barcode manuell eingeben.');
+          barcodeSetDebug('Scannerfehler');
         }
       }
-    );
+    }
 
-    barcodeControls=controls;
-    barcodeStream=video.srcObject;
+    // If the native detector is active but ZXing starts a competing stream on
+    // this browser, the existing video stream still remains the primary one.
     barcodeTrack=getBarcodeTrack();
     updateBarcodeCameraControls();
 
-    barcodeSetStatus('Barcode einfach ins Bild halten – kein exaktes Ausrichten nötig.');
+    // Small heartbeat so the user can see that the scanner is genuinely working.
+    barcodeLastDebug=Date.now();
+    const heartbeat=setInterval(()=>{
+      if(!barcodeDlg.open || barcodeBusy){
+        clearInterval(heartbeat);
+        return;
+      }
+      const seconds=Math.floor((Date.now()-barcodeLastDebug)/1000);
+      barcodeSetDebug((nativeStarted?'Scanner aktiv':'ZXing aktiv')+' · '+seconds+' s');
+    },1000);
+
   }catch(e){
     console.error(e);
+    stopBarcodeCamera();
     barcodeSetStatus('Kamera konnte nicht gestartet werden. Bitte Kamerazugriff erlauben oder Barcode manuell eingeben.');
+    barcodeSetDebug('Kamerafehler');
   }
 }
 
