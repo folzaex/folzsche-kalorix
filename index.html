@@ -55,7 +55,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.5</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.7</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -84,7 +84,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.5</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span class="brand-green">X</span></span><span class="version">V4.7</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -716,9 +716,9 @@ function periodData(){
       for(let d=new Date(startW); d<=endW; d.setDate(d.getDate()+1)){
         keys.push(d.toISOString().slice(0,10));
       }
-      const todayKeyLocal=today.toISOString().slice(0,10);
       const values=keys.map(dayTotals).map(x=>x.kcal);
-      const recorded=keys.map((k,i)=>({k,v:values[i]})).filter(x=>x.k!==todayKeyLocal&&x.v>0).map(x=>x.v);
+      // Für die Monatsstatistik zählen alle tatsächlich erfassten Tage – auch heute.
+      const recorded=values.filter(v=>v>0);
       const weightEntries=keys.map(k=>historyData[k]?.weight).filter(v=>typeof v==='number'&&v>0);
       weeks.push({
         label:`Ø KW ${getISOWeek(startW)}`,
@@ -750,8 +750,7 @@ function periodData(){
     title:'Letzte 7 Monate',
     labels:months.map(k=>'Ø '+new Intl.DateTimeFormat('de-DE',{month:'short'}).format(dateObj(k+'-01'))),
     values:months.map(k=>{
-      const todayKeyLocal=new Date().toISOString().slice(0,10);
-      const days=Object.keys(historyData).filter(day=>day.startsWith(k+'-')&&day!==todayKeyLocal);
+      const days=Object.keys(historyData).filter(day=>day.startsWith(k+'-'));
       const recorded=days.map(dayTotals).map(x=>x.kcal).filter(v=>v>0);
       return recorded.length ? Math.round(recorded.reduce((a,b)=>a+b,0)/recorded.length) : 0;
     }),
@@ -761,8 +760,8 @@ function periodData(){
         .map(([,v])=>v.weight);
       return entries.length ? entries.reduce((a,b)=>a+b,0)/entries.length : null;
     }),
-    recordedDays:months.reduce((sum,k)=>sum+Object.keys(historyData).filter(day=>day.startsWith(k+'-')&&day!==new Date().toISOString().slice(0,10)).filter(day=>dayTotals(day).kcal>0).length,0),
-    totalKcal:months.reduce((sum,k)=>sum+Object.keys(historyData).filter(day=>day.startsWith(k+'-')&&day!==new Date().toISOString().slice(0,10)).map(day=>dayTotals(day).kcal).filter(v=>v>0).reduce((a,b)=>a+b,0),0)
+    recordedDays:months.reduce((sum,k)=>sum+Object.keys(historyData).filter(day=>day.startsWith(k+'-')).filter(day=>dayTotals(day).kcal>0).length,0),
+    totalKcal:months.reduce((sum,k)=>sum+Object.keys(historyData).filter(day=>day.startsWith(k+'-')).map(day=>dayTotals(day).kcal).filter(v=>v>0).reduce((a,b)=>a+b,0),0)
   };
 }
 
