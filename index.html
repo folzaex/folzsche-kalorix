@@ -10,7 +10,7 @@
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
 .app{max-width:520px;margin:auto;padding:calc(22px + env(safe-area-inset-top)) 18px calc(90px + env(safe-area-inset-bottom))}
 header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
-.logo{font-size:25px;font-weight:800;letter-spacing:-.8px}.brand-green{color:var(--accent)}.logo span{color:var(--accent)}
+.logo{font-size:25px;font-weight:800;letter-spacing:-.8px;display:flex;align-items:center;gap:8px}.version{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0;white-space:nowrap}.brand-green{color:var(--accent)}.logo span{color:var(--accent)}
 .profile{width:40px;height:40px;border-radius:50%;background:var(--card2);display:grid;place-items:center;color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;margin-bottom:14px}
 .label{color:var(--muted);font-size:14px}.cal{font-size:42px;font-weight:800;letter-spacing:-1.8px;margin:4px 0}.cal small{font-size:17px;color:var(--muted);font-weight:500;letter-spacing:0}
@@ -47,7 +47,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main class="app">
-<header><div class="logo"><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
+<header><div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></span><span class="version">V4.0</span></div><button id="profileBtn" class="profile" type="button" aria-label="Profil">👤</button></header>
 
 <section class="card" style="position:relative">
   <div style="position:absolute;top:18px;right:18px;display:flex;gap:6px">
@@ -76,7 +76,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
 
 <div id="historyPage" style="display:none">
   <header>
-    <div class="logo"><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></div>
+    <div class="logo"><span><span class="brand-green">FOLZ</span>sche KALORI<span>X</span></span><span class="version">V4.0</span></div>
     <button class="profile" type="button" onclick="openProfile()">👤</button>
   </header>
 
@@ -207,7 +207,7 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--l
   <label class="label">Lebensmittel suchen</label>
   <div style="display:flex;gap:8px">
     <input id="searchFood" placeholder="z. B. Banane, Haferflocken..." style="margin-bottom:0">
-    <button class="save" onclick="searchFoods()" style="width:52px;border-radius:12px;border:0">⌕</button>
+    <button class="save" aria-label="Lebensmittel suchen" onclick="searchFoods()" style="width:52px;height:52px;border-radius:12px;border:0;display:grid;place-items:center;font-size:27px;line-height:1;font-family:Arial,sans-serif">⌕</button>
   </div>
   <p class="label" id="searchStatus" style="margin:10px 0 6px"></p>
   <div id="results"></div>
@@ -417,9 +417,23 @@ function openAdd(preferredMeal=''){
   renderRecentFoods();
 }
 function renderRecentFoods(){
-  const arr=personalFoods().slice(0,8);
-  if(!arr.length){results.innerHTML='<p class="label">Suche nach einem Lebensmittel – z. B. Banane, Reis oder Hähnchen.</p>';return;}
+  // Combine explicitly saved personal foods with foods already used today.
+  // This makes "Zuletzt verwendet" visible even for existing users upgrading from an older version.
+  const todayFoods=(foods||[]).map(x=>({
+    name:x.food||x.name||'', brand:x.brand||'', kcal:Number(x.kcal)||0,
+    p:Number(x.p)||0, c:Number(x.c)||0, f:Number(x.f)||0
+  })).filter(x=>x.name);
+  const arr=[...personalFoods(),...todayFoods]
+    .filter(x=>x && (x.name||x.food))
+    .map(x=>({...x,name:x.name||x.food}))
+    .filter((x,i,a)=>i===a.findIndex(y=>normalizeFoodText(y.name)===normalizeFoodText(x.name)))
+    .slice(0,8);
+
   searchStatus.textContent='Zuletzt verwendet';
+  if(!arr.length){
+    results.innerHTML='<div style="background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:4px"><strong>Zuletzt verwendet</strong><div class="label" style="margin-top:5px">Noch keine Lebensmittel verwendet. Nach der ersten Auswahl erscheinen sie hier.</div></div>';
+    return;
+  }
   showSearchResults(arr,'Zuletzt verwendet',true);
 }
 async function searchFoods(){
